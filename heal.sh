@@ -27,8 +27,8 @@ log() { echo "[$(date -u '+%Y-%m-%dT%H:%M:%SZ')] $*"; }
 probe() {
   local body_file code
   body_file="$(mktemp)"
-  code="$(curl -s -o "$body_file" -w '%{http_code}' -L --max-time 20 "$N8N_URL" 2>/dev/null || echo 000)"
-  HTTP_CODE="$code"
+  code="$(curl -s -o "$body_file" -w '%{http_code}' -L --max-time 20 "$N8N_URL" 2>/dev/null)"
+  HTTP_CODE="${code:-000}"
   if [ "$code" = "200" ] && ! grep -qi "Database is not ready" "$body_file"; then
     rm -f "$body_file"
     return 0
