@@ -1,0 +1,59 @@
+name: n8n-healer
+
+# Watchdog for the n8n instance.
+# Runs every 5 minutes; if n8n is a zombie it restarts it via the Railway API
+# and (optionally) reports the result to a LINE group.
+#
+# Every identifying value (URL / token / IDs) lives in GitHub Secrets, never in
+# this repository.
+
+on:
+  schedule:
+    # Every 5 minutes. NOTE: GitHub cron is best-effort and can be delayed
+    # under load, so real detection latency is typically 5–15 minutes.
+    - cron: '*/5 * * * *'
+  workflow_dispatch: {}   # allow manual runs from the Actions tab
+
+# Never run two healers at once (a restart takes a couple of minutes).
+concurrency:
+  group: n8n-healer
+  cancel-in-progress: false
+
+permissions:
+  contents: write   # needed only by the keepalive step (empty commit)
+
+jobs:
+  heal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Keepalive: GitHub auto-disables scheduled workflows after 60 days of
+      # repository inactivity. If the newest commit is older than 45 days, push
+      # an empty commit to reset the clock. Costs nothing on normal runs.
+      - name: Keepalive (prevent 60-day auto-disable)
+        if: ${{ github.event_name == 'schedule' }}
+        run: |
+          LAST="$(git log -1 --format=%ct)"
+          NOW="$(date -u +%s)"
+          AGE_DAYS=$(( (NOW - LAST) / 86400 ))
+          echo "newest commit is ${AGE_DAYS} day(s) old"
+          if [ "$AGE_DAYS" -ge 45 ]; then
+            git config user.name  "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit --allow-empty -m "chore: keepalive (auto)"
+            git push
+            echo "pushed keepalive commit"
+          fi
+
+      - name: Health check + auto-heal
+        env:
+          N8N_URL:                ${{ secrets.N8N_URL }}
+          RAILWAY_TOKEN:          ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_SERVICE_ID:     ${{ secrets.RAILWAY_SERVICE_ID }}
+          RAILWAY_ENVIRONMENT_ID: ${{ secrets.RAILWAY_ENVIRONMENT_ID }}
+          LINE_TOKEN:             ${{ secrets.LINE_TOKEN }}
+          ADMIN_GROUP_ID:         ${{ secrets.ADMIN_GROUP_ID }}
+        run: bash heal.sh
