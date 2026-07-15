@@ -1,0 +1,4 @@
+# Force LF so shell scripts run correctly on the Linux Actions runner.
+* text=auto eol=lf
+*.sh text eol=lf
+*.yml text eol=lf
