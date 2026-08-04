@@ -10,7 +10,10 @@
 # Nothing sensitive is hard-coded here.
 #
 #   Required : N8N_URL, RAILWAY_TOKEN, RAILWAY_SERVICE_ID, RAILWAY_ENVIRONMENT_ID
-#   Optional : LINE_TOKEN, ADMIN_GROUP_ID   (both must be set to enable LINE push)
+#   Optional : LINE_CHANNEL_ID, LINE_CHANNEL_SECRET, ADMIN_GROUP_ID
+#              (all three must be set to enable LINE push — the token is
+#              fetched fresh each run via LINE's client_credentials flow,
+#              so nothing here expires)
 #
 # Exit code: 0 = healthy or recovered, 1 = still down after restart attempt.
 
@@ -104,19 +107,30 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# Phase 4 — LINE notification (only if both LINE secrets are set)
+# Phase 4 — LINE notification (only if all three LINE secrets are set)
+# Uses stateless channel-access-token flow so nothing here expires.
 # ---------------------------------------------------------------------------
-if [ -n "${LINE_TOKEN:-}" ] && [ -n "${ADMIN_GROUP_ID:-}" ]; then
-  MSG="⚠️ n8n สะดุด — ยามสั่ง restart อัตโนมัติแล้ว
+if [ -n "${LINE_CHANNEL_ID:-}" ] && [ -n "${LINE_CHANNEL_SECRET:-}" ] && [ -n "${ADMIN_GROUP_ID:-}" ]; then
+  token="$(curl -s --max-time 20 -X POST https://api.line.me/oauth2/v3/token \
+    -H 'Content-Type: application/x-www-form-urlencoded' \
+    --data-urlencode "grant_type=client_credentials" \
+    --data-urlencode "client_id=$LINE_CHANNEL_ID" \
+    --data-urlencode "client_secret=$LINE_CHANNEL_SECRET" \
+    | jq -r '.access_token // empty')"
+  if [ -z "$token" ]; then
+    log "LINE token fetch failed — skipping notification."
+  else
+    MSG="🛠️ [healer] n8n สะดุด — ยามสั่ง restart อัตโนมัติแล้ว
 สถานะ: ${STATUS_TH}
 เวลา: $(date -u '+%Y-%m-%d %H:%M') UTC"
-  push_code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 \
-    -X POST https://api.line.me/v2/bot/message/push \
-    -H "Authorization: Bearer $LINE_TOKEN" \
-    -H 'Content-Type: application/json' \
-    --data "$(jq -n --arg to "$ADMIN_GROUP_ID" --arg text "$MSG" \
-              '{to:$to, messages:[{type:"text", text:$text}]}')")"
-  log "LINE push HTTP: $push_code"
+    push_code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 \
+      -X POST https://api.line.me/v2/bot/message/push \
+      -H "Authorization: Bearer $token" \
+      -H 'Content-Type: application/json' \
+      --data "$(jq -n --arg to "$ADMIN_GROUP_ID" --arg text "$MSG" \
+                '{to:$to, messages:[{type:"text", text:$text}]}')")"
+    log "LINE push HTTP: $push_code"
+  fi
 else
   log "LINE secrets not set — skipping notification."
 fi

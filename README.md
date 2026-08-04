@@ -22,8 +22,13 @@ variables → Actions**, never in the code:
 | `RAILWAY_TOKEN` | ✅ | Railway **Project** token (uses the `Project-Access-Token` header) |
 | `RAILWAY_SERVICE_ID` | ✅ | ID of the n8n service |
 | `RAILWAY_ENVIRONMENT_ID` | ✅ | ID of the `production` environment |
-| `LINE_TOKEN` | optional | LINE Messaging API channel access token |
-| `ADMIN_GROUP_ID` | optional | LINE group ID to notify (needs `LINE_TOKEN` too) |
+| `LINE_CHANNEL_ID` | optional | LINE OA channel ID (Provider → Channel → Basic settings) |
+| `LINE_CHANNEL_SECRET` | optional | LINE OA channel secret (same page) |
+| `ADMIN_GROUP_ID` | optional | LINE group ID to notify (needs all three LINE secrets) |
+
+The healer fetches a channel access token fresh on every run via LINE's
+`client_credentials` OAuth flow, so no long-lived token needs to be
+managed here.
 
 ## Running it
 
