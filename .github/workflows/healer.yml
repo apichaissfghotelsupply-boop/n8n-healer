@@ -54,6 +54,7 @@ jobs:
           RAILWAY_TOKEN:          ${{ secrets.RAILWAY_TOKEN }}
           RAILWAY_SERVICE_ID:     ${{ secrets.RAILWAY_SERVICE_ID }}
           RAILWAY_ENVIRONMENT_ID: ${{ secrets.RAILWAY_ENVIRONMENT_ID }}
-          LINE_TOKEN:             ${{ secrets.LINE_TOKEN }}
+          LINE_CHANNEL_ID:        ${{ secrets.LINE_CHANNEL_ID }}
+          LINE_CHANNEL_SECRET:    ${{ secrets.LINE_CHANNEL_SECRET }}
           ADMIN_GROUP_ID:         ${{ secrets.ADMIN_GROUP_ID }}
         run: bash heal.sh

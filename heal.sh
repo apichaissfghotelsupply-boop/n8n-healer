@@ -122,7 +122,7 @@ if [ -n "${LINE_CHANNEL_ID:-}" ] && [ -n "${LINE_CHANNEL_SECRET:-}" ] && [ -n "$
   else
     MSG="🛠️ [healer] n8n สะดุด — ยามสั่ง restart อัตโนมัติแล้ว
 สถานะ: ${STATUS_TH}
-เวลา: $(date -u '+%Y-%m-%d %H:%M') UTC"
+เวลา: $(TZ=Asia/Bangkok date '+%d/%m/%Y %H:%M') น. (เวลาไทย)"
     push_code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 \
       -X POST https://api.line.me/v2/bot/message/push \
       -H "Authorization: Bearer $token" \
